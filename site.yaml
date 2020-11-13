@@ -3,7 +3,7 @@
       become: true
       gather_facts: false
 
-      tasks:
+      tasks::
         - name: Install Nginx
           apt:
             name: nginx
