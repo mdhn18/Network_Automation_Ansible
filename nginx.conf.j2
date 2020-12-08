@@ -1,0 +1,29 @@
+user www-data;
+
+http{
+
+        server {
+                listen {{ ansible_default_ipv4.address }}:80 ;
+                root /var/www/html;
+
+                index index.php index.html index.htm index.nginx-debian.html;
+
+                server_name _;
+
+                location / {
+                        try_files $uri $uri/ =404;
+                }
+
+
+                location ~ \.php$ {
+                        include snippets/fastcgi-php.conf;
+
+                        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock;
+                }
+        }
+
+}
+
+
+events { }
+
