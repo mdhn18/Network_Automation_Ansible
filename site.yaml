@@ -1,0 +1,159 @@
+---
+
+- hosts: webservers
+  become: yes
+
+  tasks:
+  - name: In webservers nginx is installs
+    apt:
+      name: nginx
+      state: present
+      update_cache: true
+    notify:
+    - starting nginx
+
+  - name: On webservers php is installs
+    apt:
+
+      name: php
+      state: present
+      update_cache: true
+
+  - name: Installs php-fpm on webservers
+
+    apt:
+
+      name: php-fpm
+
+      state: present
+
+      update_cache: true
+
+    notify:
+    - starting php7.4-fpm
+  - name: To run the php files on nginx keeping php-fpm 
+    lineinfile: dest=/etc/php/7.4/fpm/php.ini regexp='^(.*)cgi.fix_pathinfo=' line=cgi.fix_pathinfo=0
+    notify:
+    - restarting php7.4-fpm
+    - restarting nginx
+
+  - name: Removes "nginx.conf" from the site at etc/nginx/
+    file:
+       path: "/etc/nginx/nginx.conf"
+       state: absent
+  
+  - name: Sets nginx.conf file in that directory etc/nginx/
+    template:
+       src: "./nginx.conf.j2"
+       dest: "/etc/nginx/nginx.conf"
+    notify:
+    - restarting php7.4-fpm
+    - restarting nginx
+
+
+
+  - name: need to removes "default" from that directory etc/nginx/sites-enabled
+    file:
+       path: "/etc/nginx/sites-enabled/default"
+       state: absent
+    notify: 
+    - restarting nginx
+
+  - name: Sets Nginx conf file in that directory etc/nginx/sites-available
+    template:
+       src: "./default"
+       dest: "/etc/nginx/sites-available/default1"
+
+  - name: links with default etc/nginx/sites-available to the etc/nginx/sites-enable
+    file:
+       src: "/etc/nginx/sites-available/default1"
+       dest: "/etc/nginx/sites-enabled/default1"
+       state: link
+    notify: 
+    - restarting nginx
+   
+
+  - name: "UFW - Allow HTTP on port 80 to connect for connections to the nginx"
+    ufw:
+       rule: allow
+       port: '80'
+       proto: any
+
+
+  - name: Setting Up index.PHP Page at the directory root var/www/html
+    template:
+      src: "./index.php"
+      dest: "/var/www/html/index.php"
+    notify:
+    - restarting nginx
+    - starting nginx
+    - restarting php7.4-fpm
+    - starting php7.4-fpm 
+
+
+  handlers:
+
+  - name: starting php7.4-fpm
+    service:
+      name: php7.4-fpm
+      state: started
+
+  - name: starting nginx
+    service:
+
+      name: nginx
+
+      state: started
+
+
+  - name: restarting php7.4-fpm
+    service:
+
+      name: php7.4-fpm
+
+      state: restarted
+  - name: restarting nginx
+
+    service:
+
+      name: nginx
+
+      state: restarted
+
+- hosts: haproxy
+  become: yes
+
+  tasks:
+
+  - name:  In devhaproxy load balancer installs haproxy load balancer
+    apt:
+      name: haproxy
+      state: present
+      update_cache: true
+
+  - name: keep haproxy configuration with jinja2 template file in the same location
+    template:
+      src: ./myhaproxy.cfg.j2
+      dest: /etc/haproxy/haproxy.cfg
+      mode: 0640
+      owner: root
+      group: root
+    notify:
+    - restarting haproxy
+  - name: Setting up default starting flag to 1 for enable haproxy
+    lineinfile:
+      dest: /etc/default/haproxy
+      regexp: "^ENABLED"
+      line: "ENABLED=1"
+    notify:
+    - restarting haproxy
+
+
+  handlers:
+  
+  - name: restarting haproxy
+    service:
+        name: haproxy
+        state: restarted
+        
+...
