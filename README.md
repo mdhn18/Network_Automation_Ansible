@@ -43,3 +43,8 @@ Host devhaproxy
     StrictHostKeyChecking no
     ProxyCommand ssh -W %h:%p bastionET2598
 ```
+Run the playbook
+
+```
+ansible-playbook -i hosts site.yaml
+```
